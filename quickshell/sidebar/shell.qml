@@ -150,6 +150,17 @@ ShellRoot {
         }
     }
 
+
+    // quit after ~2 minutes with nothing shown; scripts/qs-call.sh starts us again on demand
+    Timer {
+        property int idleTicks: 0
+        interval: 30000; repeat: true; running: true
+        onTriggered: {
+            if (root.open || root.shown || root.playerOpen || root.playerShown || root.osdOpen || root.osdShown) idleTicks = 0
+            else if (++idleTicks >= 4) Quickshell.execDetached(["qs", "-c", "sidebar", "kill"])
+        }
+    }
+
     SystemClock { id: clock; precision: SystemClock.Minutes }
 
     // ---------- app matching helpers ----------
@@ -193,7 +204,7 @@ ShellRoot {
         stdout: StdioCollector { onStreamFinished: root.projects = this.text.trim().split("\n").filter(function(l) { return l.length > 0 }) } }
 
     onTabChanged: {
-        if (tab === 2) { wallP.running = true; wallView.positionViewAtBeginning() }
+        if (tab === 2) { wallP.running = true }
         if (tab === 10) projP.running = true
     }
 
@@ -201,306 +212,337 @@ ShellRoot {
     Timer { id: briT; interval: 90; onTriggered: Quickshell.execDetached(["brightnessctl", "set", Math.max(5, Math.round(root.bri * 100)) + "%"]) }
 
     // ---------- the sidebar window ----------
-    PanelWindow {
-        id: win
-        visible: root.shown
-        anchors { left: true; top: true; bottom: true }
-        margins { top: 58; bottom: 12; left: 12 }
-        implicitWidth: root.pw + 24
-        exclusionMode: ExclusionMode.Ignore
-        color: "transparent"
+    LazyLoader {
+        active: root.shown
+        PanelWindow {
+            id: win
+            visible: root.shown
+            anchors { left: true; top: true; bottom: true }
+            margins { top: 58; bottom: 12; left: 12 }
+            implicitWidth: root.pw + 24
+            exclusionMode: ExclusionMode.Ignore
+            color: "transparent"
 
-        Rectangle {
-            id: panel
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            width: root.pw
-            x: root.open ? 0 : -(width + 24)
-            Behavior on x { NumberAnimation { duration: 230; easing.type: Easing.OutCubic } }
-            radius: 22
-            color: "#f20d0b14"
-            border.color: "#3aa77bff"
-            border.width: 1
+            Rectangle {
+                id: panel
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: root.pw
+                x: root.open ? 0 : -(width + 24)
+                Behavior on x { NumberAnimation { duration: 230; easing.type: Easing.OutCubic } }
+                radius: 22
+                color: "#f20d0b14"
+                border.color: "#3aa77bff"
+                border.width: 1
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 12
-                spacing: 10
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 10
 
-                // ----- router: tab grid (2 rows) -----
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 98
-                    radius: 17
-                    color: "#12ffffff"
-                    Grid {
-                        anchors.centerIn: parent
-                        columns: 6
-                        spacing: 4
-                        Repeater {
-                            model: root.tabs
-                            delegate: Rectangle {
-                                required property var modelData
-                                required property int index
-                                width: 43; height: 40; radius: 12
-                                color: root.tab === index ? "#44a77bff" : (tbArea.containsMouse ? "#20a77bff" : "transparent")
-                                Text { anchors.centerIn: parent; text: modelData.ic; font.pixelSize: 19; font.family: root.nerd
-                                       color: root.tab === index ? "#c0a0ff" : "#8a86a6" }
-                                MouseArea { id: tbArea; anchors.fill: parent; hoverEnabled: true; onClicked: root.tab = index }
-                            }
-                        }
-                    }
-                }
-                Text {
-                    Layout.leftMargin: 6
-                    text: root.tabs[root.tab].n
-                    color: "#a77bff"; font.pixelSize: 13; font.bold: true; font.letterSpacing: 3; font.family: root.nerd
-                }
-
-                // ----- content area (one tab visible at a time) -----
-                Item {
-                    id: content
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    clip: true
-
-                    // ===== 1: APPS =====
-                    Flickable {
-                        id: appsView
-                        anchors.fill: parent
-                        anchors.rightMargin: 8
-                        visible: root.tab === 1
-                        contentHeight: appsCol.implicitHeight
-                        boundsBehavior: Flickable.StopAtBounds
-                        Column {
-                            id: appsCol
-                            width: appsView.width
-                            spacing: 5
-
-                            Rectangle {
-                                width: parent.width; height: 54; radius: 16
-                                color: allArea.containsMouse ? "#44a77bff" : "#22a77bff"
-                                Row { anchors.centerIn: parent; spacing: 10
-                                    Text { text: "\uf303"; color: "#c0a0ff"; font.pixelSize: 24; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter }
-                                    Text { text: "All apps"; color: "#ffffff"; font.pixelSize: 15; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter } }
-                                MouseArea { id: allArea; anchors.fill: parent; hoverEnabled: true
-                                    onClicked: { Quickshell.execDetached(["rofi", "-show", "drun", "-theme", root.home + "/.config/niri/rofi.rasi"]); root.open = false } }
-                            }
-
-                            Repeater {
-                                model: root.pinned
-                                delegate: Item {
-                                    id: tile
-                                    required property string modelData
-                                    readonly property var entry: { var n = DesktopEntries.applications.values.length; return DesktopEntries.heuristicLookup(modelData) }
-                                    readonly property var tl: root.findTop(entry, modelData)
-                                    visible: entry !== null && entry !== undefined
-                                    width: appsCol.width
-                                    height: visible ? 58 : 0
-                                    Rectangle { anchors.fill: parent; radius: 16
-                                        color: tileArea.containsMouse ? "#30a77bff" : (tile.tl && tile.tl.activated ? "#1ea77bff" : "transparent") }
-                                    Rectangle { visible: tile.tl !== null; x: 3; anchors.verticalCenter: parent.verticalCenter
-                                        width: 4; height: tile.tl && tile.tl.activated ? 24 : 8; radius: 2
-                                        color: tile.tl && tile.tl.activated ? "#8fe07a" : "#a77bff" }
-                                    Image { x: 16; anchors.verticalCenter: parent.verticalCenter; width: 38; height: 38
-                                        sourceSize.width: 76; sourceSize.height: 76
-                                        source: tile.entry ? Quickshell.iconPath(tile.entry.icon, "application-x-executable") : "" }
-                                    Text { x: 68; width: parent.width - 78; anchors.verticalCenter: parent.verticalCenter
-                                        text: tile.entry ? tile.entry.name : ""; color: "#e6e2f7"; font.pixelSize: 15; font.family: root.nerd; elide: Text.ElideRight }
-                                    MouseArea { id: tileArea; anchors.fill: parent; hoverEnabled: true
-                                        onClicked: { if (tile.tl) tile.tl.activate(); else if (tile.entry) tile.entry.execute(); root.open = false } }
-                                }
-                            }
-
-                            Repeater {
-                                model: ToplevelManager.toplevels
-                                delegate: Item {
-                                    id: other
-                                    required property var modelData
-                                    readonly property var entry: { var n = DesktopEntries.applications.values.length; return DesktopEntries.heuristicLookup(modelData.appId) }
-                                    visible: !root.isPinnedTop(modelData)
-                                    width: appsCol.width
-                                    height: visible ? 58 : 0
-                                    Rectangle { anchors.fill: parent; radius: 16; color: otherArea.containsMouse ? "#30a77bff" : "transparent" }
-                                    Rectangle { x: 3; anchors.verticalCenter: parent.verticalCenter
-                                        width: 4; height: other.modelData.activated ? 24 : 8; radius: 2
-                                        color: other.modelData.activated ? "#8fe07a" : "#a77bff" }
-                                    Image { x: 16; anchors.verticalCenter: parent.verticalCenter; width: 38; height: 38
-                                        sourceSize.width: 76; sourceSize.height: 76
-                                        source: Quickshell.iconPath(other.entry ? other.entry.icon : other.modelData.appId, "application-x-executable") }
-                                    Text { x: 68; width: parent.width - 78; anchors.verticalCenter: parent.verticalCenter
-                                        text: other.entry ? other.entry.name : other.modelData.appId; color: "#e6e2f7"; font.pixelSize: 15; font.family: root.nerd; elide: Text.ElideRight }
-                                    MouseArea { id: otherArea; anchors.fill: parent; hoverEnabled: true
-                                        onClicked: { other.modelData.activate(); root.open = false } }
-                                }
-                            }
-                        }
-                    }
-                    ScrollHint { target: appsView; active: root.tab === 1 }
-
-                    // ===== 2: WALLPAPERS =====
-                    ListView {
-                        id: wallView
-                        anchors.fill: parent
-                        anchors.rightMargin: 8
-                        visible: root.tab === 2
-                        spacing: 10
-                        topMargin: 2
-                        bottomMargin: 8
-                        clip: true
-                        boundsBehavior: Flickable.StopAtBounds
-                        model: FolderListModel {
-                            folder: "file://" + root.home + "/Pictures/Wallpapers"
-                            nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp"]
-                            showDirs: false
-                            sortField: FolderListModel.Name
-                        }
-                        delegate: Item {
-                            id: wd
-                            required property string filePath
-                            required property url fileUrl
-                            width: wallView.width
-                            height: Math.round(wallView.width * 0.5625)
-                            Image { id: wimg; anchors.fill: parent; source: wd.fileUrl
-                                sourceSize.width: 560; sourceSize.height: 315
-                                fillMode: Image.PreserveAspectCrop; asynchronous: true; visible: false }
-                            Rectangle { id: wmask; anchors.fill: parent; radius: 14; visible: false; layer.enabled: true }
-                            MultiEffect { anchors.fill: parent; source: wimg; maskEnabled: true; maskSource: wmask; visible: wimg.status === Image.Ready }
-                            Rectangle { anchors.fill: parent; radius: 14; color: "#1a1626"; visible: wimg.status !== Image.Ready }
-                            Rectangle { anchors.fill: parent; radius: 14; color: "transparent"
-                                border.width: wd.filePath === root.curWall ? 3 : (wmArea.containsMouse ? 2 : 0)
-                                border.color: wd.filePath === root.curWall ? "#8fe07a" : "#a77bff" }
-                            MouseArea { id: wmArea; anchors.fill: parent; hoverEnabled: true
-                                onClicked: { root.curWall = wd.filePath; Quickshell.execDetached([root.scripts + "wallpaper.sh", wd.filePath]) } }
-                        }
-                    }
-                    ScrollHint { target: wallView; active: root.tab === 2 }
-
-                    // ===== 3: TOOLS =====
-                    Flickable {
-                        id: toolsView
-                        anchors.fill: parent
-                        anchors.rightMargin: 8
-                        visible: root.tab === 3
-                        contentHeight: toolsGrid.implicitHeight
-                        boundsBehavior: Flickable.StopAtBounds
+                    // ----- router: tab grid (2 rows) -----
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 98
+                        radius: 17
+                        color: "#12ffffff"
                         Grid {
-                            id: toolsGrid
-                            columns: 3
-                            spacing: 8
-                            width: toolsView.width
+                            anchors.centerIn: parent
+                            columns: 6
+                            spacing: 4
                             Repeater {
-                                model: root.tools
+                                model: root.tabs
                                 delegate: Rectangle {
                                     required property var modelData
-                                    width: (toolsGrid.width - 16) / 3
-                                    height: 92; radius: 16
-                                    color: tlArea.containsMouse ? "#38a77bff" : "#12ffffff"
-                                    Column { anchors.centerIn: parent; spacing: 6
-                                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.ic; color: "#b896ff"; font.pixelSize: 30; font.family: root.nerd }
-                                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.label; color: "#e6e2f7"; font.pixelSize: 12; font.family: root.nerd } }
-                                    MouseArea { id: tlArea; anchors.fill: parent; hoverEnabled: true
-                                        onClicked: { Quickshell.execDetached(modelData.cmd); root.open = false } }
+                                    required property int index
+                                    width: 43; height: 40; radius: 12
+                                    color: root.tab === index ? "#44a77bff" : (tbArea.containsMouse ? "#20a77bff" : "transparent")
+                                    Text { anchors.centerIn: parent; text: modelData.ic; font.pixelSize: 19; font.family: root.nerd
+                                           color: root.tab === index ? "#c0a0ff" : "#8a86a6" }
+                                    MouseArea { id: tbArea; anchors.fill: parent; hoverEnabled: true; onClicked: root.tab = index }
                                 }
                             }
                         }
                     }
-                    ScrollHint { target: toolsView; active: root.tab === 3 }
+                    Text {
+                        Layout.leftMargin: 6
+                        text: root.tabs[root.tab].n
+                        color: "#a77bff"; font.pixelSize: 13; font.bold: true; font.letterSpacing: 3; font.family: root.nerd
+                    }
 
-                    // ===== 10: DEV (projects) =====
-                    Flickable {
-                        id: devView
+                    // ----- content area (one tab visible at a time) -----
+                    Item {
+                        id: content
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+
+                        // ===== 1: APPS =====
+                        Flickable {
+                            id: appsView
+                            anchors.fill: parent
+                            anchors.rightMargin: 8
+                            visible: root.tab === 1
+                            contentHeight: appsCol.implicitHeight
+                            boundsBehavior: Flickable.StopAtBounds
+                            Column {
+                                id: appsCol
+                                width: appsView.width
+                                spacing: 5
+
+                                Rectangle {
+                                    width: parent.width; height: 54; radius: 16
+                                    color: allArea.containsMouse ? "#44a77bff" : "#22a77bff"
+                                    Row { anchors.centerIn: parent; spacing: 10
+                                        Text { text: "\uf303"; color: "#c0a0ff"; font.pixelSize: 24; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter }
+                                        Text { text: "All apps"; color: "#ffffff"; font.pixelSize: 15; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter } }
+                                    MouseArea { id: allArea; anchors.fill: parent; hoverEnabled: true
+                                        onClicked: { Quickshell.execDetached(["rofi", "-show", "drun", "-theme", root.home + "/.config/niri/rofi.rasi"]); root.open = false } }
+                                }
+
+                                Repeater {
+                                    model: root.pinned
+                                    delegate: Item {
+                                        id: tile
+                                        required property string modelData
+                                        readonly property var entry: { var n = DesktopEntries.applications.values.length; return DesktopEntries.heuristicLookup(modelData) }
+                                        readonly property var tl: root.findTop(entry, modelData)
+                                        visible: entry !== null && entry !== undefined
+                                        width: appsCol.width
+                                        height: visible ? 58 : 0
+                                        Rectangle { anchors.fill: parent; radius: 16
+                                            color: tileArea.containsMouse ? "#30a77bff" : (tile.tl && tile.tl.activated ? "#1ea77bff" : "transparent") }
+                                        Rectangle { visible: tile.tl !== null; x: 3; anchors.verticalCenter: parent.verticalCenter
+                                            width: 4; height: tile.tl && tile.tl.activated ? 24 : 8; radius: 2
+                                            color: tile.tl && tile.tl.activated ? "#8fe07a" : "#a77bff" }
+                                        Image { x: 16; anchors.verticalCenter: parent.verticalCenter; width: 38; height: 38
+                                            sourceSize.width: 76; sourceSize.height: 76
+                                            source: tile.entry ? Quickshell.iconPath(tile.entry.icon, "application-x-executable") : "" }
+                                        Text { x: 68; width: parent.width - 78; anchors.verticalCenter: parent.verticalCenter
+                                            text: tile.entry ? tile.entry.name : ""; color: "#e6e2f7"; font.pixelSize: 15; font.family: root.nerd; elide: Text.ElideRight }
+                                        MouseArea { id: tileArea; anchors.fill: parent; hoverEnabled: true
+                                            onClicked: { if (tile.tl) tile.tl.activate(); else if (tile.entry) tile.entry.execute(); root.open = false } }
+                                    }
+                                }
+
+                                Repeater {
+                                    model: ToplevelManager.toplevels
+                                    delegate: Item {
+                                        id: other
+                                        required property var modelData
+                                        readonly property var entry: { var n = DesktopEntries.applications.values.length; return DesktopEntries.heuristicLookup(modelData.appId) }
+                                        visible: !root.isPinnedTop(modelData)
+                                        width: appsCol.width
+                                        height: visible ? 58 : 0
+                                        Rectangle { anchors.fill: parent; radius: 16; color: otherArea.containsMouse ? "#30a77bff" : "transparent" }
+                                        Rectangle { x: 3; anchors.verticalCenter: parent.verticalCenter
+                                            width: 4; height: other.modelData.activated ? 24 : 8; radius: 2
+                                            color: other.modelData.activated ? "#8fe07a" : "#a77bff" }
+                                        Image { x: 16; anchors.verticalCenter: parent.verticalCenter; width: 38; height: 38
+                                            sourceSize.width: 76; sourceSize.height: 76
+                                            source: Quickshell.iconPath(other.entry ? other.entry.icon : other.modelData.appId, "application-x-executable") }
+                                        Text { x: 68; width: parent.width - 78; anchors.verticalCenter: parent.verticalCenter
+                                            text: other.entry ? other.entry.name : other.modelData.appId; color: "#e6e2f7"; font.pixelSize: 15; font.family: root.nerd; elide: Text.ElideRight }
+                                        MouseArea { id: otherArea; anchors.fill: parent; hoverEnabled: true
+                                            onClicked: { other.modelData.activate(); root.open = false } }
+                                    }
+                                }
+                            }
+                        }
+                        ScrollHint { target: appsView; active: root.tab === 1 }
+
+                        // ===== 2: WALLPAPERS =====
+                        ListView {
+                            id: wallView
+                            anchors.fill: parent
+                            anchors.rightMargin: 8
+                            visible: root.tab === 2
+                            spacing: 10
+                            topMargin: 2
+                            bottomMargin: 8
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+                            model: FolderListModel {
+                                folder: "file://" + root.home + "/Pictures/Wallpapers"
+                                nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp"]
+                                showDirs: false
+                                sortField: FolderListModel.Name
+                            }
+                            delegate: Item {
+                                id: wd
+                                required property string filePath
+                                required property url fileUrl
+                                width: wallView.width
+                                height: Math.round(wallView.width * 0.5625)
+                                Image { id: wimg; anchors.fill: parent; source: wd.fileUrl
+                                    sourceSize.width: 560; sourceSize.height: 315
+                                    fillMode: Image.PreserveAspectCrop; asynchronous: true; visible: false }
+                                Rectangle { id: wmask; anchors.fill: parent; radius: 14; visible: false; layer.enabled: true }
+                                MultiEffect { anchors.fill: parent; source: wimg; maskEnabled: true; maskSource: wmask; visible: wimg.status === Image.Ready }
+                                Rectangle { anchors.fill: parent; radius: 14; color: "#1a1626"; visible: wimg.status !== Image.Ready }
+                                Rectangle { anchors.fill: parent; radius: 14; color: "transparent"
+                                    border.width: wd.filePath === root.curWall ? 3 : (wmArea.containsMouse ? 2 : 0)
+                                    border.color: wd.filePath === root.curWall ? "#8fe07a" : "#a77bff" }
+                                MouseArea { id: wmArea; anchors.fill: parent; hoverEnabled: true
+                                    onClicked: { root.curWall = wd.filePath; Quickshell.execDetached([root.scripts + "wallpaper.sh", wd.filePath]) } }
+                            }
+                        }
+                        ScrollHint { target: wallView; active: root.tab === 2 }
+
+                        // ===== 3: TOOLS =====
+                        Flickable {
+                            id: toolsView
+                            anchors.fill: parent
+                            anchors.rightMargin: 8
+                            visible: root.tab === 3
+                            contentHeight: toolsGrid.implicitHeight
+                            boundsBehavior: Flickable.StopAtBounds
+                            Grid {
+                                id: toolsGrid
+                                columns: 3
+                                spacing: 8
+                                width: toolsView.width
+                                Repeater {
+                                    model: root.tools
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        width: (toolsGrid.width - 16) / 3
+                                        height: 92; radius: 16
+                                        color: tlArea.containsMouse ? "#38a77bff" : "#12ffffff"
+                                        Column { anchors.centerIn: parent; spacing: 6
+                                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.ic; color: "#b896ff"; font.pixelSize: 30; font.family: root.nerd }
+                                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.label; color: "#e6e2f7"; font.pixelSize: 12; font.family: root.nerd } }
+                                        MouseArea { id: tlArea; anchors.fill: parent; hoverEnabled: true
+                                            onClicked: { Quickshell.execDetached(modelData.cmd); root.open = false } }
+                                    }
+                                }
+                            }
+                        }
+                        ScrollHint { target: toolsView; active: root.tab === 3 }
+
+                        // ===== 10: DEV (projects) =====
+                        Flickable {
+                            id: devView
+                            anchors.fill: parent
+                            anchors.rightMargin: 8
+                            visible: root.tab === 10
+                            contentHeight: devCol.implicitHeight
+                            boundsBehavior: Flickable.StopAtBounds
+                            Column {
+                                id: devCol
+                                width: devView.width
+                                spacing: 5
+                                Rectangle {
+                                    width: parent.width; height: 54; radius: 16
+                                    color: lgArea.containsMouse ? "#44a77bff" : "#22a77bff"
+                                    Row { anchors.centerIn: parent; spacing: 10
+                                        Text { text: "\uf1d3"; color: "#8fe07a"; font.pixelSize: 20; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter }
+                                        Text { text: "lazygit"; color: "#ffffff"; font.pixelSize: 15; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter } }
+                                    MouseArea { id: lgArea; anchors.fill: parent; hoverEnabled: true
+                                        onClicked: { Quickshell.execDetached(["kitty", "--class", "lazygit", "-e", "lazygit"]); root.open = false } }
+                                }
+                                Text { text: "PROJECTS"; color: "#8a86a6"; font.pixelSize: 11; font.letterSpacing: 3; font.family: root.nerd; topPadding: 8; bottomPadding: 2; leftPadding: 4 }
+                                Repeater {
+                                    model: root.projects
+                                    delegate: Rectangle {
+                                        required property string modelData
+                                        width: devCol.width; height: 48; radius: 14
+                                        color: prjArea.containsMouse ? "#30a77bff" : "transparent"
+                                        Row { anchors.verticalCenter: parent.verticalCenter; x: 14; spacing: 12
+                                            Text { text: "\uf07b"; color: "#a77bff"; font.pixelSize: 18; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter }
+                                            Text { text: modelData.split("/").pop(); width: devCol.width - 64; elide: Text.ElideRight; color: "#e6e2f7"; font.pixelSize: 15; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter } }
+                                        MouseArea { id: prjArea; anchors.fill: parent; hoverEnabled: true
+                                            onClicked: { Quickshell.execDetached(["code", modelData]); Quickshell.execDetached(["kitty", "-d", modelData]); root.open = false } }
+                                    }
+                                }
+                            }
+                        }
+                        ScrollHint { target: devView; active: root.tab === 10 }
+                        Loader {
                         anchors.fill: parent
-                        anchors.rightMargin: 8
-                        visible: root.tab === 10
-                        contentHeight: devCol.implicitHeight
-                        boundsBehavior: Flickable.StopAtBounds
+                        active: root.tab === 0
+                        sourceComponent: Component { HomeTab { sh: root; active: root.open && root.tab === 0 } }
+                    }
+                        Loader {
+                        anchors.fill: parent
+                        active: root.tab === 4
+                        sourceComponent: Component { AudioTab { sh: root; active: root.open && root.tab === 4 } }
+                    }
+                        Loader {
+                        anchors.fill: parent
+                        active: root.tab === 5
+                        sourceComponent: Component { NetTab { sh: root; active: root.open && root.tab === 5 } }
+                    }
+                        Loader {
+                        anchors.fill: parent
+                        active: root.tab === 6
+                        sourceComponent: Component { DisplayTab { sh: root; active: root.open && root.tab === 6 } }
+                    }
+                        Loader {
+                        anchors.fill: parent
+                        active: root.tab === 7
+                        sourceComponent: Component { TasksTab { sh: root; active: root.open && root.tab === 7 } }
+                    }
+                        Loader {
+                        anchors.fill: parent
+                        active: root.tab === 8
+                        sourceComponent: Component { WeatherTab { sh: root; active: root.open && root.tab === 8 } }
+                    }
+                        Loader {
+                        anchors.fill: parent
+                        active: root.tab === 9
+                        sourceComponent: Component { CalTab { sh: root; active: root.open && root.tab === 9 } }
+                    }
+                    }
+
+                    // ----- bottom card: clock + battery on the left, buttons on the right -----
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 70
+                        radius: 18
+                        color: "#12ffffff"
+
                         Column {
-                            id: devCol
-                            width: devView.width
-                            spacing: 5
+                            anchors.left: parent.left
+                            anchors.leftMargin: 16
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 0
+                            Text { text: Qt.formatDateTime(clock.date, "HH:mm"); color: "#ffffff"; font.pixelSize: 26; font.bold: true; font.family: root.nerd }
+                            Text {
+                                readonly property real pct: UPower.displayDevice ? (UPower.displayDevice.percentage <= 1 ? UPower.displayDevice.percentage * 100 : UPower.displayDevice.percentage) : -1
+                                visible: pct >= 0
+                                text: "\uf240  " + Math.round(pct) + "%"
+                                color: pct < 20 ? "#e0607a" : "#8fe07a"
+                                font.pixelSize: 12; font.family: root.nerd
+                            }
+                        }
+
+                        Row {
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 4
                             Rectangle {
-                                width: parent.width; height: 54; radius: 16
-                                color: lgArea.containsMouse ? "#44a77bff" : "#22a77bff"
-                                Row { anchors.centerIn: parent; spacing: 10
-                                    Text { text: "\uf1d3"; color: "#8fe07a"; font.pixelSize: 20; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter }
-                                    Text { text: "lazygit"; color: "#ffffff"; font.pixelSize: 15; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter } }
-                                MouseArea { id: lgArea; anchors.fill: parent; hoverEnabled: true
-                                    onClicked: { Quickshell.execDetached(["kitty", "--class", "lazygit", "-e", "lazygit"]); root.open = false } }
+                                width: 46; height: 46; radius: 15
+                                color: bellArea.containsMouse ? "#38a77bff" : "transparent"
+                                Text { anchors.centerIn: parent; text: "\uf0f3"; color: "#e6e2f7"; font.pixelSize: 20; font.family: root.nerd }
+                                MouseArea { id: bellArea; anchors.fill: parent; hoverEnabled: true
+                                    onClicked: { Quickshell.execDetached(["swaync-client", "-t", "-sw"]); root.open = false } }
                             }
-                            Text { text: "PROJECTS"; color: "#8a86a6"; font.pixelSize: 11; font.letterSpacing: 3; font.family: root.nerd; topPadding: 8; bottomPadding: 2; leftPadding: 4 }
-                            Repeater {
-                                model: root.projects
-                                delegate: Rectangle {
-                                    required property string modelData
-                                    width: devCol.width; height: 48; radius: 14
-                                    color: prjArea.containsMouse ? "#30a77bff" : "transparent"
-                                    Row { anchors.verticalCenter: parent.verticalCenter; x: 14; spacing: 12
-                                        Text { text: "\uf07b"; color: "#a77bff"; font.pixelSize: 18; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter }
-                                        Text { text: modelData.split("/").pop(); width: devCol.width - 64; elide: Text.ElideRight; color: "#e6e2f7"; font.pixelSize: 15; font.family: root.nerd; anchors.verticalCenter: parent.verticalCenter } }
-                                    MouseArea { id: prjArea; anchors.fill: parent; hoverEnabled: true
-                                        onClicked: { Quickshell.execDetached(["code", modelData]); Quickshell.execDetached(["kitty", "-d", modelData]); root.open = false } }
-                                }
+                            Rectangle {
+                                visible: root.player !== null
+                                width: visible ? 46 : 0; height: 46; radius: 15
+                                color: musArea.containsMouse || root.playerOpen ? "#38a77bff" : "transparent"
+                                Text { anchors.centerIn: parent; text: "\uf001"; color: root.player && root.player.isPlaying ? "#8fe07a" : "#e6e2f7"; font.pixelSize: 20; font.family: root.nerd }
+                                MouseArea { id: musArea; anchors.fill: parent; hoverEnabled: true; onClicked: root.playerOpen = !root.playerOpen }
                             }
-                        }
-                    }
-                    ScrollHint { target: devView; active: root.tab === 10 }
-                    HomeTab { anchors.fill: parent; sh: root; visible: root.tab === 0; active: root.open && root.tab === 0 }
-                    AudioTab { anchors.fill: parent; sh: root; visible: root.tab === 4; active: root.open && root.tab === 4 }
-                    NetTab { anchors.fill: parent; sh: root; visible: root.tab === 5; active: root.open && root.tab === 5 }
-                    DisplayTab { anchors.fill: parent; sh: root; visible: root.tab === 6; active: root.open && root.tab === 6 }
-                    TasksTab { anchors.fill: parent; sh: root; visible: root.tab === 7; active: root.open && root.tab === 7 }
-                    WeatherTab { anchors.fill: parent; sh: root; visible: root.tab === 8; active: root.open && root.tab === 8 }
-                    CalTab { anchors.fill: parent; sh: root; visible: root.tab === 9; active: root.open && root.tab === 9 }
-                }
-
-                // ----- bottom card: clock + battery on the left, buttons on the right -----
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 70
-                    radius: 18
-                    color: "#12ffffff"
-
-                    Column {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 16
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 0
-                        Text { text: Qt.formatDateTime(clock.date, "HH:mm"); color: "#ffffff"; font.pixelSize: 26; font.bold: true; font.family: root.nerd }
-                        Text {
-                            readonly property real pct: UPower.displayDevice ? (UPower.displayDevice.percentage <= 1 ? UPower.displayDevice.percentage * 100 : UPower.displayDevice.percentage) : -1
-                            visible: pct >= 0
-                            text: "\uf240  " + Math.round(pct) + "%"
-                            color: pct < 20 ? "#e0607a" : "#8fe07a"
-                            font.pixelSize: 12; font.family: root.nerd
-                        }
-                    }
-
-                    Row {
-                        anchors.right: parent.right
-                        anchors.rightMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 4
-                        Rectangle {
-                            width: 46; height: 46; radius: 15
-                            color: bellArea.containsMouse ? "#38a77bff" : "transparent"
-                            Text { anchors.centerIn: parent; text: "\uf0f3"; color: "#e6e2f7"; font.pixelSize: 20; font.family: root.nerd }
-                            MouseArea { id: bellArea; anchors.fill: parent; hoverEnabled: true
-                                onClicked: { Quickshell.execDetached(["swaync-client", "-t", "-sw"]); root.open = false } }
-                        }
-                        Rectangle {
-                            visible: root.player !== null
-                            width: visible ? 46 : 0; height: 46; radius: 15
-                            color: musArea.containsMouse || root.playerOpen ? "#38a77bff" : "transparent"
-                            Text { anchors.centerIn: parent; text: "\uf001"; color: root.player && root.player.isPlaying ? "#8fe07a" : "#e6e2f7"; font.pixelSize: 20; font.family: root.nerd }
-                            MouseArea { id: musArea; anchors.fill: parent; hoverEnabled: true; onClicked: root.playerOpen = !root.playerOpen }
-                        }
-                        Rectangle {
-                            width: 46; height: 46; radius: 15
-                            color: pwrArea.containsMouse ? "#40e0607a" : "transparent"
-                            Text { anchors.centerIn: parent; text: "\uf011"; color: "#e0607a"; font.pixelSize: 20; font.family: root.nerd }
-                            MouseArea { id: pwrArea; anchors.fill: parent; hoverEnabled: true
-                                onClicked: { Quickshell.execDetached([root.scripts + "powermenu.sh"]); root.open = false } }
+                            Rectangle {
+                                width: 46; height: 46; radius: 15
+                                color: pwrArea.containsMouse ? "#40e0607a" : "transparent"
+                                Text { anchors.centerIn: parent; text: "\uf011"; color: "#e0607a"; font.pixelSize: 20; font.family: root.nerd }
+                                MouseArea { id: pwrArea; anchors.fill: parent; hoverEnabled: true
+                                    onClicked: { Quickshell.execDetached([root.scripts + "powermenu.sh"]); root.open = false } }
+                            }
                         }
                     }
                 }
@@ -510,198 +552,204 @@ ShellRoot {
 
 
     // ---------- OSD window ----------
-    PanelWindow {
-        id: osdWin
-        visible: root.osdShown
-        anchors { bottom: true }
-        margins { bottom: 96 }
-        implicitWidth: 360
-        implicitHeight: 76
-        exclusionMode: ExclusionMode.Ignore
-        color: "transparent"
-        mask: Region { }
+    LazyLoader {
+        active: root.osdShown
+        PanelWindow {
+            id: osdWin
+            visible: root.osdShown
+            anchors { bottom: true }
+            margins { bottom: 96 }
+            implicitWidth: 360
+            implicitHeight: 76
+            exclusionMode: ExclusionMode.Ignore
+            color: "transparent"
+            mask: Region { }
 
-        Rectangle {
-            id: osdBox
-            width: 340; height: 64
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: root.osdOpen ? 6 : 24
-            opacity: root.osdOpen ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 180 } }
-            Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-            radius: 22
-            color: "#f00d0b14"
-            border.color: "#40a77bff"
-            border.width: 1
+            Rectangle {
+                id: osdBox
+                width: 340; height: 64
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: root.osdOpen ? 6 : 24
+                opacity: root.osdOpen ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 180 } }
+                Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                radius: 22
+                color: "#f00d0b14"
+                border.color: "#40a77bff"
+                border.width: 1
 
-            readonly property bool off: root.osdMuted
-            readonly property color accent: off ? "#e0607a" : (root.osdKind === "bri" ? "#8fe07a" : "#a77bff")
-            readonly property string icon: {
-                if (root.osdKind === "bri") return ""
-                if (root.osdKind === "mic") return root.osdMuted ? "" : ""
-                if (root.osdMuted) return "\uf026"
-                return root.osdValue < 34 ? "" : ""
+                readonly property bool off: root.osdMuted
+                readonly property color accent: off ? "#e0607a" : (root.osdKind === "bri" ? "#8fe07a" : "#a77bff")
+                readonly property string icon: {
+                    if (root.osdKind === "bri") return ""
+                    if (root.osdKind === "mic") return root.osdMuted ? "" : ""
+                    if (root.osdMuted) return "\uf026"
+                    return root.osdValue < 34 ? "" : ""
+                }
+
+                Text { id: ic; x: 20; anchors.verticalCenter: parent.verticalCenter; width: 30
+                    text: osdBox.icon; color: osdBox.accent; font.pixelSize: 24; font.family: root.nerd; horizontalAlignment: Text.AlignHCenter }
+                Rectangle { id: bar; x: 64; anchors.verticalCenter: parent.verticalCenter; width: 200; height: 8; radius: 4; color: "#3d3a52"
+                    visible: root.osdKind !== "mic"
+                    Rectangle { width: bar.width * Math.max(0, Math.min(1, root.osdValue / 100)); height: bar.height; radius: 4; color: osdBox.accent
+                        Behavior on width { NumberAnimation { duration: 120 } } } }
+                Text { visible: root.osdKind === "mic"; x: 64; anchors.verticalCenter: parent.verticalCenter
+                    text: root.osdMuted ? "Mic off" : "Mic on"; color: "#ffffff"; font.pixelSize: 16; font.family: root.nerd }
+                Text { visible: root.osdKind !== "mic"; anchors.right: parent.right; anchors.rightMargin: 20; anchors.verticalCenter: parent.verticalCenter
+                    text: root.osdMuted && root.osdKind === "vol" ? "muted" : root.osdValue + "%"; color: "#ffffff"; font.pixelSize: 16; font.bold: true; font.family: root.nerd }
             }
-
-            Text { id: ic; x: 20; anchors.verticalCenter: parent.verticalCenter; width: 30
-                text: osdBox.icon; color: osdBox.accent; font.pixelSize: 24; font.family: root.nerd; horizontalAlignment: Text.AlignHCenter }
-            Rectangle { id: bar; x: 64; anchors.verticalCenter: parent.verticalCenter; width: 200; height: 8; radius: 4; color: "#3d3a52"
-                visible: root.osdKind !== "mic"
-                Rectangle { width: bar.width * Math.max(0, Math.min(1, root.osdValue / 100)); height: bar.height; radius: 4; color: osdBox.accent
-                    Behavior on width { NumberAnimation { duration: 120 } } } }
-            Text { visible: root.osdKind === "mic"; x: 64; anchors.verticalCenter: parent.verticalCenter
-                text: root.osdMuted ? "Mic off" : "Mic on"; color: "#ffffff"; font.pixelSize: 16; font.family: root.nerd }
-            Text { visible: root.osdKind !== "mic"; anchors.right: parent.right; anchors.rightMargin: 20; anchors.verticalCenter: parent.verticalCenter
-                text: root.osdMuted && root.osdKind === "vol" ? "muted" : root.osdValue + "%"; color: "#ffffff"; font.pixelSize: 16; font.bold: true; font.family: root.nerd }
         }
     }
 
     // ---------- now-playing card ----------
-    PanelWindow {
-        id: pwin
-        visible: root.playerShown
-        anchors { left: true; top: true }
-        margins { top: 58; left: root.open ? root.pw + 24 : 12 }
-        implicitWidth: 352
-        implicitHeight: 524
-        exclusionMode: ExclusionMode.Ignore
-        color: "transparent"
+    LazyLoader {
+        active: root.playerShown
+        PanelWindow {
+            id: pwin
+            visible: root.playerShown
+            anchors { left: true; top: true }
+            margins { top: 58; left: root.open ? root.pw + 24 : 12 }
+            implicitWidth: 352
+            implicitHeight: 524
+            exclusionMode: ExclusionMode.Ignore
+            color: "transparent"
 
-        Rectangle {
-            id: card
-            width: 340; height: 512
-            x: root.playerOpen ? 0 : -(width + 100)
-            Behavior on x { NumberAnimation { duration: 230; easing.type: Easing.OutCubic } }
-            radius: 22
-            color: "#f00e0c16"
-            border.color: "#40a77bff"
-            border.width: 1
+            Rectangle {
+                id: card
+                width: 340; height: 512
+                x: root.playerOpen ? 0 : -(width + 100)
+                Behavior on x { NumberAnimation { duration: 230; easing.type: Easing.OutCubic } }
+                radius: 22
+                color: "#f00e0c16"
+                border.color: "#40a77bff"
+                border.width: 1
 
-            Timer {
-                interval: 1000; repeat: true
-                running: root.playerOpen && root.player !== null && root.player.isPlaying
-                onTriggered: root.player.positionChanged()
-            }
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 18
-                spacing: 10
-
-                // cover art with rounded corners
-                Item {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredWidth: 280; Layout.preferredHeight: 280
-                    Image {
-                        id: art
-                        anchors.fill: parent
-                        source: root.player ? root.player.trackArtUrl : ""
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                        visible: false
-                    }
-                    Rectangle { id: artMask; anchors.fill: parent; radius: 18; visible: false; layer.enabled: true }
-                    MultiEffect {
-                        anchors.fill: parent
-                        source: art
-                        maskEnabled: true
-                        maskSource: artMask
-                        visible: art.status === Image.Ready
-                    }
-                    Rectangle {
-                        anchors.fill: parent; radius: 18; color: "#1a1626"
-                        visible: art.status !== Image.Ready
-                        Text { anchors.centerIn: parent; text: "\uf001"; color: "#a77bff"; font.pixelSize: 72; font.family: "CaskaydiaCove Nerd Font" }
-                    }
+                Timer {
+                    interval: 1000; repeat: true
+                    running: root.playerOpen && root.player !== null && root.player.isPlaying
+                    onTriggered: root.player.positionChanged()
                 }
 
-                // title + moving "equalizer" bars
-                RowLayout {
-                    Layout.fillWidth: true
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 18
                     spacing: 10
-                    Text {
-                        Layout.fillWidth: true
-                        text: root.player && root.player.trackTitle ? root.player.trackTitle : "nothing playing"
-                        color: "#ffffff"; font.pixelSize: 19; font.bold: true
-                        font.family: "CaskaydiaCove Nerd Font"
-                        elide: Text.ElideRight
-                    }
+
+                    // cover art with rounded corners
                     Item {
-                        Layout.preferredWidth: 26; Layout.preferredHeight: 20
-                        Repeater {
-                            model: 4
-                            delegate: Rectangle {
-                                id: bar
-                                required property int index
-                                x: index * 7
-                                width: 4; radius: 2
-                                color: "#8fe07a"
-                                property real h: 4
-                                height: h
-                                y: parent.height - h
-                                SequentialAnimation on h {
-                                    running: root.playerOpen && root.player !== null && root.player.isPlaying
-                                    loops: Animation.Infinite
-                                    NumberAnimation { to: 8 + ((bar.index * 5) % 11); duration: 240 + bar.index * 70 }
-                                    NumberAnimation { to: 4; duration: 300 + bar.index * 60 }
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.preferredWidth: 280; Layout.preferredHeight: 280
+                        Image {
+                            id: art
+                            anchors.fill: parent
+                            source: root.player ? root.player.trackArtUrl : ""
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            visible: false
+                        }
+                        Rectangle { id: artMask; anchors.fill: parent; radius: 18; visible: false; layer.enabled: true }
+                        MultiEffect {
+                            anchors.fill: parent
+                            source: art
+                            maskEnabled: true
+                            maskSource: artMask
+                            visible: art.status === Image.Ready
+                        }
+                        Rectangle {
+                            anchors.fill: parent; radius: 18; color: "#1a1626"
+                            visible: art.status !== Image.Ready
+                            Text { anchors.centerIn: parent; text: "\uf001"; color: "#a77bff"; font.pixelSize: 72; font.family: "CaskaydiaCove Nerd Font" }
+                        }
+                    }
+
+                    // title + moving "equalizer" bars
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.player && root.player.trackTitle ? root.player.trackTitle : "nothing playing"
+                            color: "#ffffff"; font.pixelSize: 19; font.bold: true
+                            font.family: "CaskaydiaCove Nerd Font"
+                            elide: Text.ElideRight
+                        }
+                        Item {
+                            Layout.preferredWidth: 26; Layout.preferredHeight: 20
+                            Repeater {
+                                model: 4
+                                delegate: Rectangle {
+                                    id: bar
+                                    required property int index
+                                    x: index * 7
+                                    width: 4; radius: 2
+                                    color: "#8fe07a"
+                                    property real h: 4
+                                    height: h
+                                    y: parent.height - h
+                                    SequentialAnimation on h {
+                                        running: root.playerOpen && root.player !== null && root.player.isPlaying
+                                        loops: Animation.Infinite
+                                        NumberAnimation { to: 8 + ((bar.index * 5) % 11); duration: 240 + bar.index * 70 }
+                                        NumberAnimation { to: 4; duration: 300 + bar.index * 60 }
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                Text {
-                    Layout.fillWidth: true
-                    text: root.player && root.player.trackArtist ? root.player.trackArtist : ""
-                    color: "#a77bff"; font.pixelSize: 14
-                    font.family: "CaskaydiaCove Nerd Font"
-                    elide: Text.ElideRight
-                }
-
-                // progress bar (click to seek)
-                Item {
-                    Layout.fillWidth: true; Layout.preferredHeight: 22
-                    Rectangle { id: trackBar; anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.topMargin: 4; height: 6; radius: 3; color: "#3d3a52" }
-                    Rectangle {
-                        anchors.left: trackBar.left; anchors.top: trackBar.top; height: trackBar.height; radius: 3
-                        width: root.player && root.player.length > 0 ? trackBar.width * Math.min(1, root.player.position / root.player.length) : 0
-                        color: "#a77bff"
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.player && root.player.trackArtist ? root.player.trackArtist : ""
+                        color: "#a77bff"; font.pixelSize: 14
+                        font.family: "CaskaydiaCove Nerd Font"
+                        elide: Text.ElideRight
                     }
-                    MouseArea {
-                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: 16
-                        onClicked: function(m) {
-                            if (root.player && root.player.canSeek && root.player.length > 0)
-                                root.player.position = (m.x / width) * root.player.length
+
+                    // progress bar (click to seek)
+                    Item {
+                        Layout.fillWidth: true; Layout.preferredHeight: 22
+                        Rectangle { id: trackBar; anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.topMargin: 4; height: 6; radius: 3; color: "#3d3a52" }
+                        Rectangle {
+                            anchors.left: trackBar.left; anchors.top: trackBar.top; height: trackBar.height; radius: 3
+                            width: root.player && root.player.length > 0 ? trackBar.width * Math.min(1, root.player.position / root.player.length) : 0
+                            color: "#a77bff"
+                        }
+                        MouseArea {
+                            anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: 16
+                            onClicked: function(m) {
+                                if (root.player && root.player.canSeek && root.player.length > 0)
+                                    root.player.position = (m.x / width) * root.player.length
+                            }
+                        }
+                        Text { anchors.left: parent.left; anchors.bottom: parent.bottom; text: root.player ? root.fmt(root.player.position) : "0:00"; color: "#7d7a96"; font.pixelSize: 11; font.family: "CaskaydiaCove Nerd Font" }
+                        Text { anchors.right: parent.right; anchors.bottom: parent.bottom; text: root.player ? root.fmt(root.player.length) : "0:00"; color: "#7d7a96"; font.pixelSize: 11; font.family: "CaskaydiaCove Nerd Font" }
+                    }
+
+                    // controls
+                    RowLayout {
+                        Layout.alignment: Qt.AlignHCenter
+                        spacing: 18
+                        Rectangle {
+                            Layout.preferredWidth: 44; Layout.preferredHeight: 44; radius: 22
+                            color: prevArea.containsMouse ? "#30a77bff" : "transparent"
+                            Text { anchors.centerIn: parent; text: "\uf048"; color: "#d9d4ee"; font.pixelSize: 18; font.family: "CaskaydiaCove Nerd Font" }
+                            MouseArea { id: prevArea; anchors.fill: parent; hoverEnabled: true; onClicked: if (root.player) root.player.previous() }
+                        }
+                        Rectangle {
+                            Layout.preferredWidth: 56; Layout.preferredHeight: 56; radius: 28
+                            color: playArea.containsMouse ? "#c0a0ff" : "#a77bff"
+                            Text { anchors.centerIn: parent; text: root.player && root.player.isPlaying ? "\uf04c" : "\uf04b"; color: "#0e0c16"; font.pixelSize: 22; font.family: "CaskaydiaCove Nerd Font" }
+                            MouseArea { id: playArea; anchors.fill: parent; hoverEnabled: true; onClicked: if (root.player) root.player.togglePlaying() }
+                        }
+                        Rectangle {
+                            Layout.preferredWidth: 44; Layout.preferredHeight: 44; radius: 22
+                            color: nextArea.containsMouse ? "#30a77bff" : "transparent"
+                            Text { anchors.centerIn: parent; text: "\uf051"; color: "#d9d4ee"; font.pixelSize: 18; font.family: "CaskaydiaCove Nerd Font" }
+                            MouseArea { id: nextArea; anchors.fill: parent; hoverEnabled: true; onClicked: if (root.player) root.player.next() }
                         }
                     }
-                    Text { anchors.left: parent.left; anchors.bottom: parent.bottom; text: root.player ? root.fmt(root.player.position) : "0:00"; color: "#7d7a96"; font.pixelSize: 11; font.family: "CaskaydiaCove Nerd Font" }
-                    Text { anchors.right: parent.right; anchors.bottom: parent.bottom; text: root.player ? root.fmt(root.player.length) : "0:00"; color: "#7d7a96"; font.pixelSize: 11; font.family: "CaskaydiaCove Nerd Font" }
+                    Item { Layout.fillHeight: true }
                 }
-
-                // controls
-                RowLayout {
-                    Layout.alignment: Qt.AlignHCenter
-                    spacing: 18
-                    Rectangle {
-                        Layout.preferredWidth: 44; Layout.preferredHeight: 44; radius: 22
-                        color: prevArea.containsMouse ? "#30a77bff" : "transparent"
-                        Text { anchors.centerIn: parent; text: "\uf048"; color: "#d9d4ee"; font.pixelSize: 18; font.family: "CaskaydiaCove Nerd Font" }
-                        MouseArea { id: prevArea; anchors.fill: parent; hoverEnabled: true; onClicked: if (root.player) root.player.previous() }
-                    }
-                    Rectangle {
-                        Layout.preferredWidth: 56; Layout.preferredHeight: 56; radius: 28
-                        color: playArea.containsMouse ? "#c0a0ff" : "#a77bff"
-                        Text { anchors.centerIn: parent; text: root.player && root.player.isPlaying ? "\uf04c" : "\uf04b"; color: "#0e0c16"; font.pixelSize: 22; font.family: "CaskaydiaCove Nerd Font" }
-                        MouseArea { id: playArea; anchors.fill: parent; hoverEnabled: true; onClicked: if (root.player) root.player.togglePlaying() }
-                    }
-                    Rectangle {
-                        Layout.preferredWidth: 44; Layout.preferredHeight: 44; radius: 22
-                        color: nextArea.containsMouse ? "#30a77bff" : "transparent"
-                        Text { anchors.centerIn: parent; text: "\uf051"; color: "#d9d4ee"; font.pixelSize: 18; font.family: "CaskaydiaCove Nerd Font" }
-                        MouseArea { id: nextArea; anchors.fill: parent; hoverEnabled: true; onClicked: if (root.player) root.player.next() }
-                    }
-                }
-                Item { Layout.fillHeight: true }
             }
         }
     }

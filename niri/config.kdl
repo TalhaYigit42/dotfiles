@@ -138,7 +138,7 @@ spawn-at-startup "@HOME@/.config/niri/scripts/autofit.py"
 spawn-at-startup "@HOME@/.config/niri/scripts/battery-watch.sh"
 spawn-at-startup "waybar" "-c" "@HOME@/.config/niri/waybar/config.jsonc" "-s" "@HOME@/.config/niri/waybar/style.css"
 spawn-at-startup "swaync"
-spawn-at-startup "qs" "-c" "sidebar"
+// the sidebar (quickshell) starts on demand via scripts/qs-call.sh and quits itself when idle
 spawn-at-startup "sh" "-c" "command -v kdeconnect-cli >/dev/null && kdeconnect-cli -l >/dev/null 2>&1"
 spawn-at-startup "@HOME@/.config/niri/scripts/wallpaper.sh"
 spawn-at-startup "lxqt-policykit-agent"
@@ -291,8 +291,8 @@ binds {
     Mod+Alt+G hotkey-overlay-title="lazygit" { spawn "kitty" "--class" "lazygit" "-e" "lazygit"; }
     Mod+H hotkey-overlay-title="Half width" { set-column-width "50%"; }
     Mod+Alt+H hotkey-overlay-title="Phone menu (KDE Connect)" { spawn "@HOME@/.config/niri/scripts/phone.sh"; }
-    Mod+M hotkey-overlay-title="Music card (Spotify) on/off" { spawn "qs" "-c" "sidebar" "ipc" "call" "player" "toggle"; }
-    Mod+Space hotkey-overlay-title="Sidebar (dock) on/off" { spawn "qs" "-c" "sidebar" "ipc" "call" "sidebar" "toggle"; }
+    Mod+M hotkey-overlay-title="Music card (Spotify) on/off" { spawn "@HOME@/.config/niri/scripts/qs-call.sh" "player" "toggle"; }
+    Mod+Space hotkey-overlay-title="Sidebar (dock) on/off" { spawn "@HOME@/.config/niri/scripts/qs-call.sh" "sidebar" "toggle"; }
     Mod+Alt+X hotkey-overlay-title="Chess menu (Stockfish, 2 players, daily puzzle)" { spawn "@HOME@/.config/niri/scripts/chess.sh"; }
     Mod+Shift+G hotkey-overlay-title="Glitch animations on/off" { spawn "@HOME@/.config/niri/scripts/glitch-toggle.sh"; }
     Mod+I hotkey-overlay-title="Navi (stay awake) toggle" { spawn "@HOME@/.config/niri/scripts/navi.sh" "toggle"; }
