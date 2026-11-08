@@ -1,0 +1,36 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 34,
+  "margin-top": 8,
+  "margin-left": 12,
+  "margin-right": 12,
+  "spacing": 8,
+  "modules-left": ["custom/logo", "custom/where", "niri/window"],
+  "modules-center": ["clock"],
+  "modules-right": ["custom/spotify", "group/tools", "group/status", "battery"],
+
+  "group/status": { "orientation": "horizontal", "modules": ["cpu", "memory", "pulseaudio", "network", "bluetooth"] },
+
+  "custom/pomodoro": { "hide-empty-text": true, "exec": "@HOME@/.config/niri/scripts/pomodoro.py", "return-type": "json", "interval": 1, "signal": 10, "on-click": "@HOME@/.config/niri/scripts/pomodoro.py toggle", "on-click-right": "@HOME@/.config/niri/scripts/pomodoro.py reset" },
+  "custom/swaync": { "exec": "swaync-client -swb", "return-type": "json", "format": "{icon}", "escape": true, "tooltip": true, "on-click": "swaync-client -t -sw", "on-click-right": "swaync-client -d -sw",
+    "format-icons": { "notification": "\uf0f3", "none": "\uf0f3", "dnd-notification": "\uf1f6", "dnd-none": "\uf1f6", "inhibited-notification": "\uf0f3", "inhibited-none": "\uf0f3", "dnd-inhibited-notification": "\uf1f6", "dnd-inhibited-none": "\uf1f6" } },
+  "group/tools": { "orientation": "horizontal", "modules": ["custom/pomodoro", "custom/navi", "custom/swaync", "tray"] },
+  "custom/logo": { "format": "\uf303", "tooltip": false, "on-click": "niri msg action toggle-overview" },
+  "custom/where": { "exec": "@HOME@/.config/niri/scripts/where.sh", "return-type": "json", "interval": 1, "on-click": "niri msg action toggle-overview", "on-click-right": "@HOME@/.config/niri/scripts/pick.sh" },
+  "niri/window": { "format": "{title}", "max-length": 24, "separate-outputs": true, "rewrite": { "^$": "desktop" } },
+  "custom/navi": { "exec": "@HOME@/.config/niri/scripts/navi.sh status", "return-type": "json", "interval": 2, "signal": 9, "on-click": "@HOME@/.config/niri/scripts/navi.sh toggle" },
+  "custom/spotify": { "hide-empty-text": true,
+    "exec": "@HOME@/.config/niri/scripts/spotify.sh", "return-type": "json", "max-length": 22, "min-length": 22,
+    "on-click": "playerctl -p spotify play-pause", "on-click-right": "playerctl -p spotify next", "on-click-middle": "playerctl -p spotify previous",
+    "on-scroll-up": "playerctl -p spotify volume 0.05+", "on-scroll-down": "playerctl -p spotify volume 0.05-"
+  },
+  "clock": { "interval": 30, "format": "{:%H:%M  \u00b7  %a %d %b}", "tooltip-format": "PRESENT DAY, PRESENT TIME.\n<tt>{calendar}</tt>" },
+  "cpu": { "format": "\uf2db  {usage}%", "interval": 3 },
+  "memory": { "format": "\uf538  {used:0.1f}G", "interval": 5 },
+  "pulseaudio": { "format": "{icon}  {volume}%", "format-muted": "\uf026  muted", "format-icons": { "default": ["\uf027", "\uf027", "\uf028"] }, "on-click": "pavucontrol" },
+  "network": { "format-wifi": "\uf1eb", "format-ethernet": "\uf796", "format-disconnected": "\uf071", "tooltip-format-wifi": "{essid}", "on-click": "nm-connection-editor" },
+  "bluetooth": { "format": "\uf294", "format-off": "\uf294", "format-disabled": "\uf294", "format-connected": "\uf294", "on-click": "blueman-manager" },
+  "battery": { "format": "{icon}  {capacity}%", "format-charging": "\uf0e7  {capacity}%", "format-plugged": "\uf1e6  {capacity}%", "format-icons": ["\uf244", "\uf243", "\uf242", "\uf241", "\uf240"], "states": { "warning": 25, "critical": 12 } },
+  "tray": { "spacing": 6, "icon-size": 15, "show-passive-items": false }
+}

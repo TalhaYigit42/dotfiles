@@ -1,0 +1,39 @@
+# Eva-01 starship: purple path, green when ok, red when the last command failed
+add_newline = false
+format = """$directory$git_branch$git_status$python$nodejs$rust$cmd_duration$character"""
+right_format = "$time"
+
+[character]
+success_symbol = "[❯](bold #8fe07a)"
+error_symbol = "[❯](bold #e0607a)"
+
+[directory]
+style = "bold #a77bff"
+truncation_length = 3
+truncation_symbol = "…/"
+format = "[$path]($style) "
+
+[git_branch]
+symbol = " "
+style = "#8fe07a"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "#d6b36a"
+format = "[$all_status$ahead_behind]($style) "
+
+[cmd_duration]
+min_time = 3000
+style = "#7d7a96"
+format = "[$duration]($style) "
+
+[python]
+symbol = " "
+style = "#7d7a96"
+format = "[$symbol$version]($style) "
+
+[time]
+disabled = false
+time_format = "%H:%M"
+style = "#7d7a96"
+format = "[$time]($style)"

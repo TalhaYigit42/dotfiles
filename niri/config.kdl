@@ -1,0 +1,307 @@
+// Niri config - German keyboard, familiar keybinds (Mod = Super)
+// Press Super+/ any time to see all keybinds.
+
+input {
+    keyboard {
+        xkb {
+            layout "de"
+        }
+        numlock
+    }
+    touchpad {
+        tap
+    }
+    focus-follows-mouse max-scroll-amount="0%"
+}
+
+layout {
+    gaps 14
+    center-focused-column "never"
+    default-column-width { proportion 0.5; }
+    preset-column-widths {
+        proportion 0.5
+        proportion 0.66667
+        proportion 1.0
+    }
+    focus-ring {
+        width 2
+        active-gradient from="#a77bff" to="#8fe07a" angle=45
+        inactive-color "#2a2638"
+    }
+    border {
+        off
+    }
+    shadow {
+        off
+    }
+    struts {
+        left 6
+        right 6
+        top 0
+        bottom 6
+    }
+}
+
+// Fixed workspaces 1-9 (so you can jump to any number even if empty)
+workspace "1"
+workspace "2"
+workspace "3"
+workspace "4"
+workspace "5"
+workspace "6"
+workspace "7"
+workspace "8"
+workspace "9"
+
+overview {
+    zoom 0.42
+    backdrop-color "#0a0910"
+    workspace-shadow {
+        color "#a77bff30"
+        softness 40
+        spread 6
+    }
+}
+
+environment {
+    // Run apps natively on Wayland (sharp text, correct sizing)
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+    MOZ_ENABLE_WAYLAND "1"
+    QT_QPA_PLATFORM "wayland;xcb"
+    QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
+    QT_QPA_PLATFORMTHEME "qt6ct"
+    SDL_VIDEODRIVER "wayland,x11"
+    _JAVA_AWT_WM_NONREPARENTING "1"
+}
+
+prefer-no-csd
+
+// Floating helpers
+window-rule {
+    match app-id=r#"^dropdown$"#
+    open-floating true
+    default-floating-position x=0 y=8 relative-to="top"
+    default-column-width { fixed 1100; }
+    default-window-height { fixed 460; }
+}
+window-rule {
+    match app-id=r#"^(pavucontrol|nm-connection-editor|blueman-manager)$"#
+    open-floating true
+}
+window-rule {
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    open-floating true
+}
+
+// Every window opens fitted to the screen (like Hyprland); Mod+R shrinks it.
+window-rule {
+    default-column-width { proportion 1.0; }
+    open-maximized-to-edges false
+}
+
+// Terminals open full width (keeps gaps, border and rounded corners). Mod+R shrinks to 2/3, 1/3, 1/2.
+window-rule {
+    match app-id=r#"^kitty$"#
+    default-column-width { proportion 1.0; }
+}
+
+// Everything see-through. 1.0 = solid. Later rules override earlier ones.
+window-rule {
+    opacity 0.88
+}
+// kitty already has its own transparency (kitty.conf), so no extra here
+window-rule {
+    match app-id=r#"^(kitty|dropdown|lazygit|btop|chess)$"#
+    opacity 1.0
+}
+// keep video / 3D / capture solid so colors stay correct
+window-rule {
+    match app-id=r#"^(mpv|vlc|org\.blender\.Blender|blender|com\.obsproject\.Studio|io\.github\.celluloid_player\.Celluloid|com\.github\.rafostar\.Clapper|org\.gimp\.GIMP|krita|steam)$"#
+    opacity 1.0
+}
+// Electron apps stay solid (VS Code, Spotify, WebCord, Discord, GitHub Desktop, Arduino IDE, Mullvad, Unity Hub, ...)
+window-rule {
+    match app-id=r#"^(com\.microsoft\.VSCode|code|Code|code-oss|spotify|Spotify|io\.github\.spacingbat3\.webcord|WebCord|discord|Discord|vesktop|GitHub Desktop|github-desktop|arduino-ide|Arduino IDE|Mullvad VPN|mullvad-gui|unityhub|obsidian|Slack|slack|signal|Signal|element|Element|teams-for-linux|Postman|postman|netduel|NetDuel)$"#
+    opacity 1.0
+}
+
+window-rule {
+    geometry-corner-radius 10
+    clip-to-geometry true
+}
+
+animations {
+    slowdown 0.9
+}
+
+spawn-at-startup "@HOME@/.config/niri/scripts/autofit.py"
+spawn-at-startup "@HOME@/.config/niri/scripts/battery-watch.sh"
+spawn-at-startup "waybar" "-c" "@HOME@/.config/niri/waybar/config.jsonc" "-s" "@HOME@/.config/niri/waybar/style.css"
+spawn-at-startup "swaync"
+spawn-at-startup "qs" "-c" "sidebar"
+spawn-at-startup "sh" "-c" "command -v kdeconnect-cli >/dev/null && kdeconnect-cli -l >/dev/null 2>&1"
+spawn-at-startup "@HOME@/.config/niri/scripts/wallpaper.sh"
+spawn-at-startup "lxqt-policykit-agent"
+spawn-at-startup "@HOME@/.config/niri/scripts/navi.sh" "start-idle"
+spawn-at-startup "sh" "-c" "wl-paste --watch cliphist store"
+
+screenshot-path "~/Pictures/Screenshots/Screenshot %Y-%m-%d %H-%M-%S.png"
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+binds {
+    // ───────── Help ─────────
+    Mod+Slash hotkey-overlay-title="Show all keybinds" { show-hotkey-overlay; }
+
+    // ───────── Apps ─────────
+    Mod+T hotkey-overlay-title="Terminal" { spawn "kitty"; }
+    Mod+E hotkey-overlay-title="File explorer" { spawn "thunar"; }
+    Mod+B hotkey-overlay-title="Web browser" { spawn "firefox"; }
+    Mod+C hotkey-overlay-title="Text editor" { spawn "kitty" "-e" "nvim"; }
+    Mod+A hotkey-overlay-title="App launcher" { spawn "sh" "-c" "pkill -x rofi || rofi -show drun -theme @HOME@/.config/niri/rofi.rasi"; }
+    Mod+Shift+E hotkey-overlay-title="File finder" { spawn "sh" "-c" "pkill -x rofi || rofi -show filebrowser -theme @HOME@/.config/niri/rofi.rasi"; }
+    Mod+V hotkey-overlay-title="Clipboard history" { spawn "sh" "-c" "cliphist list | rofi -dmenu -theme @HOME@/.config/niri/rofi.rasi | cliphist decode | wl-copy"; }
+    Ctrl+Shift+Escape hotkey-overlay-title="System monitor" { spawn "kitty" "-e" "btop"; }
+    Mod+L hotkey-overlay-title="Lock screen" { spawn "@HOME@/.config/niri/scripts/lock.sh"; }
+    Mod+Shift+W hotkey-overlay-title="Random wallpaper" { spawn "@HOME@/.config/niri/scripts/wallpaper.sh"; }
+
+    // ───────── Windows ─────────
+    Mod+Q hotkey-overlay-title="Close window" { close-window; }
+    Alt+F4 { close-window; }
+    Mod+W hotkey-overlay-title="Toggle floating" { toggle-window-floating; }
+    Shift+F11 hotkey-overlay-title="Fullscreen" { fullscreen-window; }
+    Mod+F hotkey-overlay-title="Maximize column" { maximize-column; }
+    Mod+Shift+F hotkey-overlay-title="Fill remaining space" { expand-column-to-available-width; }
+    Mod+R hotkey-overlay-title="Cycle width: 1/2, 2/3, full" { switch-preset-column-width; }
+    Mod+Shift+R hotkey-overlay-title="Reset window height" { reset-window-height; }
+    Mod+G hotkey-overlay-title="Tabbed column (group)" { toggle-column-tabbed-display; }
+    Mod+J hotkey-overlay-title="Center column" { center-column; }
+
+    // ───────── Focus (arrows) ─────────
+    Mod+Left  hotkey-overlay-title="Focus left"  { focus-column-left; }
+    Mod+Right hotkey-overlay-title="Focus right" { focus-column-right; }
+    Mod+Up    hotkey-overlay-title="Focus up"    { focus-window-up; }
+    Mod+Down  hotkey-overlay-title="Focus down"  { focus-window-down; }
+    Alt+Tab hotkey-overlay-title="Previous window" { focus-window-previous; }
+    Mod+Tab hotkey-overlay-title="Numbered window picker (workspace.column)" { spawn "sh" "-c" "pkill -x rofi || @HOME@/.config/niri/scripts/pick.sh"; }
+
+    // ───────── Move windows ─────────
+    Mod+Shift+Ctrl+Left  hotkey-overlay-title="Move column left"  { move-column-left; }
+    Mod+Shift+Ctrl+Right hotkey-overlay-title="Move column right" { move-column-right; }
+    Mod+Shift+Ctrl+Up    hotkey-overlay-title="Move window up"    { move-window-up; }
+    Mod+Shift+Ctrl+Down  hotkey-overlay-title="Move window down"  { move-window-down; }
+    Mod+Alt+Left  hotkey-overlay-title="Merge window into left column"  { consume-or-expel-window-left; }
+    Mod+Alt+Right hotkey-overlay-title="Merge window into right column" { consume-or-expel-window-right; }
+
+    // Workspace switching
+    Mod+Ctrl+Left  hotkey-overlay-title="Go left (continues into previous workspace)" { spawn "@HOME@/.config/niri/scripts/side.sh" "left"; }
+    Mod+Ctrl+Right hotkey-overlay-title="Go right (continues into next workspace)" { spawn "@HOME@/.config/niri/scripts/side.sh" "right"; }
+    Mod+Ctrl+Up    hotkey-overlay-title="Previous workspace" { focus-workspace-up; }
+    Mod+Ctrl+Down  hotkey-overlay-title="Next workspace"     { focus-workspace-down; }
+
+    // ───────── Resize ─────────
+    Mod+Shift+Left  hotkey-overlay-title="Narrower" { set-column-width "-5%"; }
+    Mod+Shift+Right hotkey-overlay-title="Wider"    { set-column-width "+5%"; }
+    Mod+Shift+Up    hotkey-overlay-title="Shorter"  { set-window-height "-5%"; }
+    Mod+Shift+Down  hotkey-overlay-title="Taller"   { set-window-height "+5%"; }
+
+    // ───────── Workspaces ─────────
+    Mod+1 hotkey-overlay-title="Jump to column 1-9" { focus-column 1; }
+    Mod+2 { focus-column 2; }
+    Mod+3 { focus-column 3; }
+    Mod+4 { focus-column 4; }
+    Mod+5 { focus-column 5; }
+    Mod+6 { focus-column 6; }
+    Mod+7 { focus-column 7; }
+    Mod+8 { focus-column 8; }
+    Mod+9 { focus-column 9; }
+    Mod+Shift+1 hotkey-overlay-title="Move column to position 1-9" { move-column-to-index 1; }
+    Mod+Shift+2 { move-column-to-index 2; }
+    Mod+Shift+3 { move-column-to-index 3; }
+    Mod+Shift+4 { move-column-to-index 4; }
+    Mod+Shift+5 { move-column-to-index 5; }
+    Mod+Shift+6 { move-column-to-index 6; }
+    Mod+Shift+7 { move-column-to-index 7; }
+    Mod+Shift+8 { move-column-to-index 8; }
+    Mod+Shift+9 { move-column-to-index 9; }
+    // Workspaces 1-9 always exist: Mod+Ctrl+N goes there, Mod+Ctrl+Shift+N sends the window there
+    Mod+Ctrl+1 { focus-workspace "1"; }
+    Mod+Ctrl+Shift+1 { move-window-to-workspace "1"; }
+    Mod+Ctrl+2 { focus-workspace "2"; }
+    Mod+Ctrl+Shift+2 { move-window-to-workspace "2"; }
+    Mod+Ctrl+3 { focus-workspace "3"; }
+    Mod+Ctrl+Shift+3 { move-window-to-workspace "3"; }
+    Mod+Ctrl+4 { focus-workspace "4"; }
+    Mod+Ctrl+Shift+4 { move-window-to-workspace "4"; }
+    Mod+Ctrl+5 { focus-workspace "5"; }
+    Mod+Ctrl+Shift+5 { move-window-to-workspace "5"; }
+    Mod+Ctrl+6 { focus-workspace "6"; }
+    Mod+Ctrl+Shift+6 { move-window-to-workspace "6"; }
+    Mod+Ctrl+7 { focus-workspace "7"; }
+    Mod+Ctrl+Shift+7 { move-window-to-workspace "7"; }
+    Mod+Ctrl+8 { focus-workspace "8"; }
+    Mod+Ctrl+Shift+8 { move-window-to-workspace "8"; }
+    Mod+Ctrl+9 { focus-workspace "9"; }
+    Mod+Ctrl+Shift+9 { move-window-to-workspace "9"; }
+    Mod+Page_Down hotkey-overlay-title="Workspace down" { focus-workspace-down; }
+    Mod+Page_Up   hotkey-overlay-title="Workspace up"   { focus-workspace-up; }
+    Mod+Shift+Page_Down hotkey-overlay-title="Move window to workspace below" { move-column-to-workspace-down; }
+    Mod+Shift+Page_Up   hotkey-overlay-title="Move window to workspace above" { move-column-to-workspace-up; }
+    Mod+WheelScrollDown { focus-column-right; }
+    Mod+WheelScrollUp   { focus-column-left; }
+    Mod+Ctrl+WheelScrollDown { focus-column-right; }
+    Mod+Ctrl+WheelScrollUp   { focus-column-left; }
+    Mod+O hotkey-overlay-title="Overview" { toggle-overview; }
+
+    // ───────── Screenshots ─────────
+    Mod+P hotkey-overlay-title="Screenshot (select area)" { screenshot; }
+    Mod+Ctrl+P hotkey-overlay-title="Screenshot window" { screenshot-window; }
+    Mod+Alt+P hotkey-overlay-title="Screenshot screen" { screenshot-screen; }
+    Print hotkey-overlay-title="Screenshot screen" { screenshot-screen; }
+
+    // ───────── Audio / brightness ─────────
+    F10 allow-when-locked=true hotkey-overlay-title="Mute" { spawn "@HOME@/.config/niri/scripts/osd.sh" "vol-mute"; }
+    F11 allow-when-locked=true hotkey-overlay-title="Volume down" { spawn "@HOME@/.config/niri/scripts/osd.sh" "vol-down"; }
+    F12 allow-when-locked=true hotkey-overlay-title="Volume up" { spawn "@HOME@/.config/niri/scripts/osd.sh" "vol-up"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "@HOME@/.config/niri/scripts/osd.sh" "vol-up"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "@HOME@/.config/niri/scripts/osd.sh" "vol-down"; }
+    XF86AudioMute        allow-when-locked=true { spawn "@HOME@/.config/niri/scripts/osd.sh" "vol-mute"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn "@HOME@/.config/niri/scripts/osd.sh" "mic-mute"; }
+    XF86AudioPlay        allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioNext        allow-when-locked=true { spawn "playerctl" "next"; }
+    XF86AudioPrev        allow-when-locked=true { spawn "playerctl" "previous"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "@HOME@/.config/niri/scripts/osd.sh" "bri-up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "@HOME@/.config/niri/scripts/osd.sh" "bri-down"; }
+
+    // ───────── Session ─────────
+    Mod+Alt+T hotkey-overlay-title="Dropdown terminal" { spawn "@HOME@/.config/niri/scripts/dropdown.sh"; }
+    Mod+Shift+S hotkey-overlay-title="Record screen region (toggle)" { spawn "@HOME@/.config/niri/scripts/record.sh"; }
+    Mod+Shift+C hotkey-overlay-title="Color picker" { spawn "@HOME@/.config/niri/scripts/colorpick.sh"; }
+    Mod+Shift+A hotkey-overlay-title="Screenshot + draw on it (satty)" { spawn "@HOME@/.config/niri/scripts/annotate.sh"; }
+    Mod+Alt+O hotkey-overlay-title="OCR: copy text from screen area" { spawn "@HOME@/.config/niri/scripts/ocr.sh"; }
+    Mod+Alt+N hotkey-overlay-title="Night light on/off" { spawn "@HOME@/.config/niri/scripts/nightlight.sh"; }
+    // ───────── Dev ─────────
+    Mod+Return hotkey-overlay-title="Terminal" { spawn "kitty"; }
+    Mod+D hotkey-overlay-title="Project switcher (VS Code + terminal)" { spawn "@HOME@/.config/niri/scripts/projects.sh"; }
+    Mod+S hotkey-overlay-title="Snippets (copy to clipboard)" { spawn "@HOME@/.config/niri/scripts/snippets.sh"; }
+    Mod+Alt+M hotkey-overlay-title="Quick note -> ~/Documents/notes/inbox.md" { spawn "@HOME@/.config/niri/scripts/note.sh"; }
+    Mod+Alt+C hotkey-overlay-title="Calculator (hex/bin/math)" { spawn "@HOME@/.config/niri/scripts/calc.py"; }
+    Mod+Alt+G hotkey-overlay-title="lazygit" { spawn "kitty" "--class" "lazygit" "-e" "lazygit"; }
+    Mod+H hotkey-overlay-title="Half width" { set-column-width "50%"; }
+    Mod+Alt+H hotkey-overlay-title="Phone menu (KDE Connect)" { spawn "@HOME@/.config/niri/scripts/phone.sh"; }
+    Mod+M hotkey-overlay-title="Music card (Spotify) on/off" { spawn "qs" "-c" "sidebar" "ipc" "call" "player" "toggle"; }
+    Mod+Space hotkey-overlay-title="Sidebar (dock) on/off" { spawn "qs" "-c" "sidebar" "ipc" "call" "sidebar" "toggle"; }
+    Mod+Alt+X hotkey-overlay-title="Chess menu (Stockfish, 2 players, daily puzzle)" { spawn "@HOME@/.config/niri/scripts/chess.sh"; }
+    Mod+Shift+G hotkey-overlay-title="Glitch animations on/off" { spawn "@HOME@/.config/niri/scripts/glitch-toggle.sh"; }
+    Mod+I hotkey-overlay-title="Navi (stay awake) toggle" { spawn "@HOME@/.config/niri/scripts/navi.sh" "toggle"; }
+    Mod+N hotkey-overlay-title="Do not disturb (toggle)" { spawn "swaync-client" "-d" "-sw"; }
+    Mod+Shift+N hotkey-overlay-title="Notification history" { spawn "swaync-client" "-t" "-sw"; }
+    Mod+Escape hotkey-overlay-title="Power menu" { spawn "@HOME@/.config/niri/scripts/powermenu.sh"; }
+    Mod+Delete hotkey-overlay-title="Quit niri" { quit; }
+    Ctrl+Alt+Delete { quit; }
+}
+
+// Lain glitch animations (toggle: Mod+Shift+G). Leave commented to disable.
+// include "glitch.kdl"

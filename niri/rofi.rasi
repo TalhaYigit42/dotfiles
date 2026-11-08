@@ -1,0 +1,25 @@
+configuration {
+  show-icons: true;
+  icon-theme: "breeze-dark";
+  drun-display-format: "{name}";
+  display-drun: "LAUNCH";
+  display-window: "WINDOW";
+  display-filebrowser: "FILES";
+  display-run: "RUN";
+}
+* {
+  bg: #0e0c16ee; bg-alt: #17142200; fg: #d9d4ee; dim: #7d7a96;
+  purple: #a77bff; green: #8fe07a;
+  font: "CaskaydiaCove Nerd Font 12";
+  background-color: transparent; text-color: @fg;
+}
+window { width: 600px; background-color: @bg; border: 1px; border-color: #a77bff55; border-radius: 14px; }
+mainbox { padding: 14px; spacing: 10px; children: [ inputbar, listview ]; }
+inputbar { padding: 10px 14px; background-color: #ffffff0d; border-radius: 10px; spacing: 10px; children: [ prompt, entry ]; }
+prompt { text-color: @purple; }
+entry { placeholder: "search"; placeholder-color: @dim; text-color: @fg; }
+listview { lines: 8; spacing: 2px; scrollbar: false; fixed-height: true; }
+element { padding: 8px 12px; spacing: 14px; border-radius: 10px; }
+element selected.normal { background-color: #a77bff30; text-color: #ffffff; }
+element-icon { size: 28px; background-color: transparent; }
+element-text { vertical-align: 0.5; background-color: transparent; text-color: inherit; }

@@ -1,0 +1,26 @@
+git: undo last commit (keep changes)	git reset --soft HEAD~1
+git: amend commit message	git commit --amend
+git: stash everything for now	git stash -u && git stash list
+git: pretty log as a graph	git log --oneline --graph --decorate --all -20
+git: restore a file	git restore <file>
+git: delete merged branches	git branch --merged | grep -v '\*' | xargs -r git branch -d
+git: show / change remote	git remote -v
+python: create + activate venv	python3 -m venv .venv && source .venv/bin/activate
+python: quick web server (8000)	python3 -m http.server 8000
+port in use? (free 3000)	fuser -k 3000/tcp
+what listens on which port	ss -ltnp
+find big files	du -ah . | sort -rh | head -20
+ssh: tunnel to postgres	ssh -L 5432:localhost:5432 user@host
+curl: json POST	curl -X POST -H 'Content-Type: application/json' -d '{"key":"value"}' http://localhost:3000/api
+systemd: user log live	journalctl --user -u NAME -f
+tar: pack a folder	tar czf archiv.tar.gz ordner/
+psql: connect	psql -h localhost -U postgres -d mydb
+psql: tables / describe	\dt\n\d table_name
+sql: list all triggers	SELECT tgname, tgrelid::regclass AS tabelle, tgenabled FROM pg_trigger WHERE NOT tgisinternal;
+sql: trigger function (logging template)	CREATE OR REPLACE FUNCTION log_change() RETURNS trigger AS $$\nBEGIN\n  INSERT INTO audit(tabelle, aktion, zeit) VALUES (TG_TABLE_NAME, TG_OP, now());\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;
+sql: create trigger	CREATE TRIGGER trg_log\nAFTER INSERT OR UPDATE OR DELETE ON some_table\nFOR EACH ROW EXECUTE FUNCTION log_change();
+sql: BEFORE trigger (checks a value)	CREATE OR REPLACE FUNCTION check_value() RETURNS trigger AS $$\nBEGIN\n  IF NEW.price < 0 THEN\n    RAISE EXCEPTION 'Price must not be negative';\n  END IF;\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;
+sql: function with return value	CREATE OR REPLACE FUNCTION sum_two(a int, b int) RETURNS int AS $$\n  SELECT a + b;\n$$ LANGUAGE sql;
+sql: drop trigger/function	DROP TRIGGER IF EXISTS trg_log ON some_table;\nDROP FUNCTION IF EXISTS log_change();
+html: skeleton	<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>Title</title>\n</head>\n<body>\n\n</body>\n</html>
+java: main method	public static void main(String[] args) {\n    \n}

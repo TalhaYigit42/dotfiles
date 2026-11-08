@@ -1,0 +1,79 @@
+{
+  "positionX": "right",
+  "positionY": "top",
+  "layer": "overlay",
+  "control-center-layer": "top",
+  "cssPriority": "user",
+  "control-center-margin-top": 8,
+  "control-center-margin-right": 12,
+  "control-center-margin-bottom": 12,
+  "notification-window-width": 360,
+  "control-center-width": 380,
+  "fit-to-screen": false,
+  "timeout": 4,
+  "timeout-low": 3,
+  "timeout-critical": 8,
+  "notification-icon-size": 40,
+  "hide-on-clear": true,
+  "hide-on-action": true,
+  "widgets": [
+    "title",
+    "dnd",
+    "buttons-grid",
+    "mpris",
+    "volume",
+    "backlight",
+    "notifications"
+  ],
+  "widget-config": {
+    "title": {
+      "text": "notifications",
+      "clear-all-button": true,
+      "button-text": "clear"
+    },
+    "dnd": {
+      "text": "do not disturb"
+    },
+    "mpris": {
+      "image-size": 84,
+      "image-radius": 12
+    },
+    "volume": {
+      "label": ""
+    },
+    "backlight": {
+      "label": "",
+      "device": "intel_backlight",
+      "subsystem": "backlight"
+    },
+    "buttons-grid": {
+      "actions": [
+        {
+          "label": "",
+          "command": "@HOME@/.config/niri/scripts/nightlight.sh"
+        },
+        {
+          "label": "",
+          "command": "@HOME@/.config/niri/scripts/navi.sh toggle"
+        },
+        {
+          "label": "",
+          "command": "@HOME@/.config/niri/scripts/glitch-toggle.sh"
+        },
+        {
+          "label": "",
+          "command": "@HOME@/.config/niri/scripts/lock.sh"
+        },
+        {
+          "label": "",
+          "command": "@HOME@/.config/niri/scripts/annotate.sh"
+        },
+        {
+          "label": "",
+          "command": "@HOME@/.config/niri/scripts/colorpick.sh"
+        }
+      ]
+    }
+  },
+  "control-center-height": 720
+}

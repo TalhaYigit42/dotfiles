@@ -1,0 +1,69 @@
+/* Subtle Eva-01: dark glass, purple accent, a touch of green */
+@define-color bg rgba(14, 12, 22, 0.72);
+@define-color purple #a77bff;
+@define-color green #8fe07a;
+@define-color red #e0607a;
+@define-color fg #d9d4ee;
+@define-color dim #7d7a96;
+
+* { font-family: "CaskaydiaCove Nerd Font", "JetBrains Mono", monospace; font-size: 12px; font-weight: normal; border: none; border-radius: 0; min-height: 0; }
+window#waybar { background: transparent; color: @fg; }
+
+#tools, #custom-spotify, #custom-logo, #custom-where, #window, #clock, #status, #battery {
+  background: @bg;
+  border: 1px solid rgba(167, 123, 255, 0.16);
+  border-radius: 10px;
+  padding: 0 14px;
+  color: @fg;
+}
+
+#custom-logo { color: @purple; font-size: 15px; padding: 0 14px; }
+#custom-where { color: @dim; }
+#window { color: @fg; }
+#clock { color: @fg; padding: 0 18px; }
+#custom-spotify { color: @green; }
+#custom-spotify.paused { color: @dim; }
+#custom-spotify.stopped { padding: 0; border: none; background: transparent; }
+#status { padding: 0 6px; color: @dim; }
+#status > * > * { padding: 0 9px; }
+#cpu, #memory, #pulseaudio, #network, #bluetooth { color: @fg; }
+#pulseaudio.muted { color: @dim; }
+#battery { color: @fg; }
+#battery.charging { color: @green; }
+#battery.warning:not(.charging) { color: #d6b36a; }
+#battery.critical:not(.charging) { color: @red; }
+
+tooltip { background: rgba(14, 12, 22, 0.95); border: 1px solid rgba(167,123,255,0.35); border-radius: 10px; }
+tooltip label { color: @fg; }
+#custom-navi.on { color: #8fe07a; border-color: rgba(143, 224, 122, 0.5); }
+#custom-navi.off { color: #7d7a96; }
+#custom-pomodoro.idle { color: @dim; }
+#custom-pomodoro.work { color: @purple; border-color: rgba(167, 123, 255, 0.5); }
+#custom-pomodoro.break { color: @green; }
+#custom-pomodoro.paused { color: @dim; }
+#custom-swaync { color: @fg; padding: 0 12px; }
+#custom-swaync.notification, #custom-swaync.dnd-notification { color: @purple; }
+#custom-swaync.dnd-none, #custom-swaync.dnd-notification { color: @dim; }
+#custom-chess { color: @fg; }
+#custom-chess.none { padding: 0; border: none; background: transparent; }
+#custom-phone { color: @fg; }
+#custom-phone.charging { color: @green; }
+#custom-phone.low { color: @red; }
+#custom-phone.none { padding: 0; border: none; background: transparent; }
+
+/* groups: one pill each, children are plain */
+#media, #tools { padding: 0 6px; }
+#media > *, #tools > * { background: transparent; border: none; padding: 0 9px; margin: 0; }
+#custom-spotify, #custom-chess, #custom-phone, #custom-pomodoro, #custom-navi, #custom-swaync { background: transparent; border: none; box-shadow: none; }
+#tray.empty { padding: 0; border: none; background: transparent; }
+#tools > #tray { padding: 0 4px; }
+#tools > #tray.empty { padding: 0; }
+
+/* v3: spotify gets its own pill again, tools pill spaces its children */
+#custom-spotify { background: @bg; border: 1px solid rgba(167,123,255,0.16); border-radius: 10px; padding: 0 14px; }
+#custom-spotify.stopped { padding: 0; border: none; background: transparent; }
+#tools > * { padding: 0 8px; }
+#custom-pomodoro.work { color: @purple; } #custom-pomodoro.break { color: @green; }
+#custom-pomodoro.idle { padding: 0; margin: 0; min-width: 0; min-height: 0; font-size: 0; opacity: 0; }
+#tools > #custom-pomodoro.idle { padding: 0; }
+#custom-navi.off { color: @dim; }

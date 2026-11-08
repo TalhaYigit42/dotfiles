@@ -1,0 +1,13 @@
+# personal things the scripts can create at runtime -- never commit these
+lichess.token
+lichess.user
+weather.city
+events.txt
+stundenplan.txt
+untis.url
+*.bak
+*.bak[0-9]
+*.pre-*
+*.v[0-9]*
+__pycache__/
+*.pyc
