@@ -65,7 +65,7 @@ some things i'm kinda proud of:
 ## install
 
 ```bash
-git clone https://github.com/TalhaYigit42/dotfiles ~/dotfiles && cd ~/dotfiles
+git clone https://github.com/tkafka42/dotfiles ~/dotfiles && cd ~/dotfiles
 ./install.sh      # backs up whatever it replaces, never uses sudo
 ```
 

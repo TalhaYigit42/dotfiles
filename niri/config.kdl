@@ -119,6 +119,11 @@ window-rule {
     match app-id=r#"^(mpv|vlc|org\.blender\.Blender|blender|com\.obsproject\.Studio|io\.github\.celluloid_player\.Celluloid|com\.github\.rafostar\.Clapper|org\.gimp\.GIMP|krita|steam)$"#
     opacity 1.0
 }
+// LibreOffice stays solid (documents are easier to read)
+window-rule {
+    match app-id=r#"^(libreoffice-.*|soffice)$"#
+    opacity 1.0
+}
 // Electron apps stay solid (VS Code, Spotify, WebCord, Discord, GitHub Desktop, Arduino IDE, Mullvad, Unity Hub, ...)
 window-rule {
     match app-id=r#"^(com\.microsoft\.VSCode|code|Code|code-oss|spotify|Spotify|io\.github\.spacingbat3\.webcord|WebCord|discord|Discord|vesktop|GitHub Desktop|github-desktop|arduino-ide|Arduino IDE|Mullvad VPN|mullvad-gui|unityhub|obsidian|Slack|slack|signal|Signal|element|Element|teams-for-linux|Postman|postman|netduel|NetDuel)$"#
