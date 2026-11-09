@@ -1,5 +1,11 @@
 # niri dotfiles
 
+[![lint](https://github.com/tkafka42/dotfiles/actions/workflows/lint.yml/badge.svg)](https://github.com/tkafka42/dotfiles/actions/workflows/lint.yml)
+![niri](https://img.shields.io/badge/wm-niri-8a6bd1)
+![quickshell](https://img.shields.io/badge/shell-quickshell-5fb37d)
+![arch](https://img.shields.io/badge/os-arch%20linux-1793d1)
+![license](https://img.shields.io/badge/license-MIT-green)
+
 hyprland sucks and keeps crashing after every system update (`pacman -Syu`) or hyprland update, so i switched to **niri** in hope it's more stable. here are my dotfiles for anyone who likes the looks.
 
 aesthetically it's inspired by my fav shows, evangelion and lain, just subtle tho lol. enjoy.
@@ -15,6 +21,15 @@ it's also pretty light: with the sidebar closed, the whole shell (bar, notificat
 > **niri** + **waybar** + a **quickshell** sidebar, dark glass, purple/green accents. Arch Linux, Wayland.
 
 ![bar](screenshots/bar.jpg)
+
+## table of contents
+
+- [the fun part: the sidebar](#the-fun-part-the-sidebar)
+- [keybinds](#keybinds)
+- [install](#install)
+- [what it needs (arch)](#what-it-needs-arch)
+- [heads up](#heads-up)
+- [layout](#layout)
 
 ## the fun part: the sidebar
 
